@@ -1,2 +1,6 @@
-# Vue-thirty-days-of-vue
-关于Vue的基础练习（不定期更新）
+# Vue之旅
+
+> [@tuyyang](https://github.com/tuyyang/Vue)
+>
+> Start：2019-11-12
+
