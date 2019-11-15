@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>To Do List</title>
+    <title>Todo List</title>
     <style>
         .completed {
             text-decoration: line-through;
@@ -23,39 +23,33 @@
     <div id="todo-app">
         <div>
             <input type="button" value="全部标为完成"
+                v-if="leftTodosCount"
                 @click="markAllAsCompleted">
             <input type="text" placeholder="添加todo"
                 :class="{empty: emptyChecked}"
                 v-model="newTodoTitle"
                 @keyup.enter="addTodo">
-            <span v-if="emptyChecked" style="color:red">请输入内容</span>
-            <div v-if="hasRemovedTodo"> 
-                <input type="button" value="撤销"
-                    @click="restoreTodo()">
-            </div>
-                
+            <span v-if="emptyChecked" style="color: red;">请输入内容</span>
         </div>
         <!-- todo list -->
         <ul>
             <li v-for="todo in filteredTodos" :key="todo.id">
                 <span :class="{completed: todo.completed}"
-                @dbclick="editTodo">{{ todo.title }}</span>
+                    @dbclick="editTodo(todo)">{{ todo.title }}</span>
                 <input type="button" value="标为完成"
                     @click="markAsCompleted(todo)"
                     v-if="!todo.completed">
-                <input v-else type="button" value="标为未完成"
-                    @click="markAsUncompleted(todo)">
+                <input type="button" value="标为未完成"
+                    @click="markAsUncompleted(todo)" v-else>
                 <input type="button" value="还原"
                     v-if="todo.removed"
                     @click="restoreTodo(todo)">
                 <input type="button" value="删除"
                     v-else="todo.removed"
                     @click="removeTodo(todo)">
-                
-
                 <input type="text" value="编辑 todo..."
                     v-focus="true"
-                    v-if="editedTodo !== null"
+                    v-if="editedTodo !== null "
                     v-model="todo.title"
                     @keyup.enter="editDone(todo)"
                     @keyup.esc="cancelDone(todo)">
@@ -63,10 +57,10 @@
         </ul>
         <!-- end todo list -->
         <div>
-            <span v-if="leftTodosCount">剩余 {{leftTodosCount}} 项为完成 ---</span>
-            <span v-else-if="completedTodosCount">全部完成，你真是太优秀了</span>
+            <span v-if="leftTodosCount">剩余 {{leftTodosCount}} 项未完成---</span>
+            <span v-else-if="completedTodosCount">全部完成，你真优秀</span>
             <span v-else>添加我的第一个todo</span>
-            <span v-if="todos.length || recycleBin.length">筛选：
+            <span v-if="todos.length">筛选：
                 <input type="button" value="全部"
                     :class="{selected: intention==='all'}"
                     @click="intention='all'">
@@ -76,17 +70,17 @@
                     @click="intention='ongoing'">
                 <input type="button" value="已完成"
                     v-if="completedTodosCount"
-                    :class="{selected: intention==='completed=true'}"
-                    @click="intention='completed=true'">
+                    :class="{selected: intention==='completed'}"
+                    @click="intention='completed'">
                 <input type="button" value="清除已完成"
                     v-if="completedTodosCount"
                     @click="clearCompleted">
                 <input type="button" value="清除全部"
                     @click="clearAll">
                 <input type="button" value="回收站"
-                    v-if="recycleBin.length"
                     @click="intention='removed'">
             </span>
+            
         </div>
     </div>
 
@@ -94,17 +88,33 @@
     <script src="https://cdn.bootcss.com/vue/2.5.16/vue.js"></script>
     <script>
         let id = 0;
+
+        var STORAGE_KEY = 'vue2.x-todo-tutorial';
+        var todoStorage = {
+            fetch: function () {
+                var todos = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                todos.forEach(function (todo, index) {
+                    todo.id = index
+                });
+                todoStorage.uid = todos.length;
+                return todos
+            },
+            save: function (todos) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
+            }
+        };
+
         var app = new Vue({
             el: '#todo-app',
             data: function() {
                 return {
                     todos: todoStorage.fetch(),
-                    recycleBin: [],
+                    recycleBin: [], //用于存放已经删除的todo
                     newTodoTitle: '',
                     checkEmpty: false,
-                    removedTodo: null, //暂存上一次删除的Todo
-                    editedTodo: null, //暂存编辑前的todo
-                    intention: 'all', //默认all
+                    removedTodo: null,
+                    editedTodo: null,
+                    intention: 'all',
                 }
             },
             methods: {
@@ -115,95 +125,72 @@
                     }
                     this.todos.push(
                         {id: todoStorage.uid++, title: this.newTodoTitle, completed: false, remove: false}
-                        );
+                    );
                     this.newTodoTitle = '';
                     this.checkEmpty = false;
                 },
                 markAsCompleted: function(todo) {
-                    todo.completed = true;
+                    todo.completed = true
                 },
                 markAsUncompleted: function(todo) {
-                    todo.completed = false;
+                    todo.completed = false
                 },
-                // removeTodo: function(todo) {
-                //     if( !confirm('确认删除?') ) {
-                //         return
-                //     }
-                //     this.todos.splice(this.todos.indexOf(todo), 1)
-                // }
                 removeTodo: function(todo) {
-                    let removedTodo = this.todos.splice(this.todos.indexOf(todo),1)[0];
+                    let removedTodo = this.todos.splice(this.todos.indexOf(todo), 1)[0];
                     removedTodo.removed = true;
-                    this.recycleBin.unshift(removedTodo);                
+                    this.recycleBin.unshift(removedTodo);
+                    // this.todos.splice(this.todos.indexOf(todo),1)
                 },
-                restoreTodo: function() {
+                restoreTodo: function(todo) {
                     todo.removed = false;
                     this.todos.unshift(todo);
                     let pos = this.recycleBin.indexOf(todo);
                     this.recycleBin.splice(pos,1);
-                    // let restored = this.removedTodo.todo;
-                    // this.todos.splice(pos, 0, restored); //第二个参数表示在数组的指定位置插入元素
-                    // this.removedTodo = null;
                 },
                 editTodo: function(todo) {
-                    this.editedTodo = {id: todo.id, title: todo.title, finished: todo.finished}
+                    this.editedTodo = {id: todo.id, title: todo.title, completed: todo.completed}
                 },
                 editDone: function(todo) {
                     if(todo.title === '') {
-                        this.removedTodo(todo)
+                        this.removeTodo(todo)
                     }
                     this.editedTodo = null
                 },
-                cancelDone: function(todo) {
+                cancelTodo: function(todo) {
                     todo.title = this.editedTodo.title;
-                    this.editedTodo = null
+                    this.editedTodo = null;
                 },
                 markAllAsCompleted: function() {
                     this.todos.map(function(todo) {
-                        if(!todo.completed) {
+                        if (!todo.completed) {
                             todo.completed = true
                         }
                     })
                 },
                 clearCompleted: function() {
-                    if (!confirm('确认清除全部已完成的待办事项？')) {
-                        return
-                    }
-                    this.completedTodos.map(todo => todo.removed = true);
+                    this.completedTodos.map(todo => todo.remove = true);
                     this.recycleBin.unshift(...this.completedTodos);
                     this.todos = this.leftTodos;
+                    // this.todos = this.todos.filter(todo => !todo.completed)
                 },
                 clearAll: function() {
-                    if (!confirm('确认清除全部待办事项？')) {
-                        return
-                    }
-                    this.todos.map(todo => todo.removed = true);
-                    this.recycleBin.unshift(...this.completedTodos);
+                    this.todos.map(todo => todo.remove = true);
+                    this.recycleBin.unshift(...this.todos);
                     this.todos = [];
-                }
-            },
-            directives: {
-                focus: {
-                    inserted: function(el) {
-                        el.focus()
-                    }
                 }
             },
             computed: {
                 emptyChecked: function() {
                     return this.newTodoTitle.length === 0 && this.checkEmpty
                 },
-                hasRemovedTodo: function() {
-                    return !!this.removedTodo
-                },
-                leftTodos: function() {
-                    return this.todos.filter(todo => !todo.completed)
-                },
                 completedTodos: function() {
                     return this.todos.filter(todo => todo.completed)
                 },
                 completedTodosCount: function() {
                     return this.completedTodos.length
+                },
+                leftTodos: function() {
+                    return this.todos.filter(todo => !todo.completed)
                 },
                 leftTodosCount: function() {
                     return this.leftTodos.length
@@ -220,30 +207,24 @@
                     }
                 },
             },
+            directives: {
+                focus: {
+                    inserted: function(el) {
+                        el.focus()
+                    }
+                }
+            },
             watch: {
                 todos: {
                     handler: function(todos) {
                         todoStorage.save(todos)
                     },
-                    deep: ture
+                    deep: true
                 }
             },
-        })
+        });
 
-        var STORAGE_KEY = 'vue2.x-todo-tutorial';
-        var todoStorage = {
-            fetch: function() {
-                var todos = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-                todos.forEach(function(todo, index) {
-                    todo.id = index
-                });
-                todoStorage.uid = todos.length;
-                return todos
-            },
-            save: function(todo) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
-            }
-        };
+        
     </script>
 </body>
 </html>
