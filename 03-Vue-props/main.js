@@ -10,12 +10,18 @@ Vue.component('tweet-content', {
         </p>
       </div>
       <div class="level-left">
-        <a href="#" class="level-item">
+        <a class="level-item">
           <span class="icon is-small">
             <i class="fas fa-heart"></i>
           </span>
           <span class="likes">
             {{tweet.likes}}
+          </span>
+        </a>
+        <a class="level-item"
+          @click="$emit('add', tweet)">
+          <span class="icon is-small">
+            <i class="fas fa-plus"></i>
           </span>
         </a>
       </div>
@@ -34,7 +40,9 @@ Vue.component('tweet-component', {
               <img :src="tweet.img">
             </figure>
           </div>
-          <tweet-content :tweet="tweet"></tweet-content>
+          <tweet-content :tweet="tweet"
+            @add="$emit('add', $event)">
+          </tweet-content>
         </article>
       </div>
       <div class="control">
@@ -52,5 +60,17 @@ new Vue({
   el: '#app',
   data: {
     tweets
+  },
+  methods: {
+    addTweetMessage(tweet) {
+      let newTweet = {}
+      let lastTweetObjectID = this.tweets[this.tweets.length - 1].id 
+
+      newTweet = Object.assign({}, tweet)
+
+      newTweet.id = lastTweetObjectID + 1
+
+      this.tweets.push(newTweet)
+    }
   }
 })
